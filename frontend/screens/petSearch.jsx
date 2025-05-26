@@ -149,7 +149,7 @@ const PetSearchComponent = () => {
       case 'bird':
         return 'https://images.unsplash.com/photo-1522926193341-e9ffd686c60f?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
       case 'rabbit':
-        return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b308?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
+        return 'https://images.unsplash.com/photo-1585110396000-c9ffd4e4b5ae?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
       case 'reptile':
         return 'https://images.unsplash.com/photo-1504450874802-0ba2bcd9b5ae?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60';
       default:
@@ -157,24 +157,33 @@ const PetSearchComponent = () => {
     }
   };
 
+  // Fixed navigation to go to Lost & Found tab and then to "found" section
   const navigateToAllFoundPets = () => {
-    // Navigate to the Found Pets tab
-    navigation.navigate('ReportTab', {
-      screen: 'ReportMain',
-      params: { initialTab: 'found' }
+    // Navigate back to MainTabs, then to ReportTab (Lost & Found), then to the found section
+    navigation.navigate('MainTabs', {
+      screen: 'ReportTab',
+      params: {
+        screen: 'ReportMain',
+        params: {
+          initialTab: 'found' // This will tell the Lost & Found screen to show the "found" tab
+        }
+      }
     });
   };
 
-const navigateToPetDetails = (pet) => {
-  // Correctly navigate to LostPetDetails with the pet data
-  navigation.navigate('ReportTab', {
-    screen: 'ReportMain',
-    params: { 
-      screen: 'LostPetDetails',
-      params: { petData: pet }
-    }
-  });
-}
+  // Fixed navigation for "View Details" button
+  const navigateToPetDetails = (pet) => {
+    // Navigate to LostPetDetails screen within the ReportStack
+    navigation.navigate('MainTabs', {
+      screen: 'ReportTab',
+      params: {
+        screen: 'LostPetDetails',
+        params: {
+          petData: pet
+        }
+      }
+    });
+  };
 
   const resetForm = () => {
     setFormData({

@@ -437,11 +437,11 @@ const AdoptionScreen = () => {
             keyExtractor={item => item._id}
             numColumns={2}
             columnWrapperStyle={styles.columnWrapper}
-            contentContainerStyle={styles.listContent}
+           contentContainerStyle={[styles.listContent, { paddingBottom: 100 }]} 
             ListHeaderComponent={
               <Text style={styles.sectionTitle}>
                 {viewFavorites ? 'Your Favorite Pets' : 
-                 showMatches ? 'All Available Pets' : 'Available for Adoption'}
+                 showMatches ? 'All Available Pets' : 'Ready to Adopt'}
               </Text>
             }
             ListEmptyComponent={

@@ -15,41 +15,48 @@ const colors = {
 
 const { width } = Dimensions.get('window');
 
+// Optimized sidebar width calculation
+const getSidebarWidth = () => {
+  if (width <= 320) return width * 0.75; // 75% for very small screens
+  if (width <= 375) return width * 0.70; // 70% for small screens
+  if (width <= 414) return width * 0.65; // 65% for medium screens
+  return Math.min(width * 0.60, 280); // 60% for larger screens, max 280px
+};
+
+const SIDEBAR_WIDTH = getSidebarWidth();
+
 const Sidebar = ({ isOpen, onClose }) => {
   const navigation = useNavigation();
-   const slideAnim = useRef(new Animated.Value(-width)).current;
+  const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
 
   // Update your menu items to match exact screen names from your navigator
   const menuItems = [
-    { name: 'MainTabs', label: 'Home', icon: <Feather name="home" size={20} color={colors.white} /> },
-    { name: 'Shelter', label: 'Shelters', icon: <Feather name="heart" size={20} color={colors.white} /> },
-    { name: 'Donate', label: 'Donations', icon: <Feather name="dollar-sign" size={20} color={colors.white} /> }, // Changed from DonationStack to Donate
-    { name: 'QuickDoc', label: 'Pet Health', icon: <Feather name="activity" size={20} color={colors.white} /> }, // Changed from PetDocStack to QuickDoc
-    { name: 'PetSearch', label: 'Lost Pets', icon: <Feather name="map-pin" size={20} color={colors.white} /> }, // Changed from PetSearchStack to PetSearch
-    { name: 'Tips', label: 'Care Guide', icon: <Feather name="book-open" size={20} color={colors.white} /> }, // Changed from PetTipsStack to Tips
-    { name: 'PetActivityRoulette', label: 'Pet Roulette', icon: <Feather name="rotate-cw" size={20} color={colors.white} /> }, // Changed from RouletteScreen to PetActivityRoulette
+    { name: 'MainTabs', label: 'Home', icon: <Feather name="home" size={18} color={colors.white} /> },
+    { name: 'Shelter', label: 'Shelters', icon: <Feather name="heart" size={18} color={colors.white} /> },
+    { name: 'Donate', label: 'Donations', icon: <Feather name="dollar-sign" size={18} color={colors.white} /> },
+    { name: 'QuickDoc', label: 'Pet Health', icon: <Feather name="activity" size={18} color={colors.white} /> },
+    { name: 'PetSearch', label: 'Lost Pets', icon: <Feather name="map-pin" size={18} color={colors.white} /> },
+    { name: 'Tips', label: 'Care Guide', icon: <Feather name="book-open" size={18} color={colors.white} /> },
+    { name: 'PetActivityRoulette', label: 'PetScape', icon: <Feather name="rotate-cw" size={18} color={colors.white} /> },
   ];
 
   const supportItems = [
-    { name: 'ContactScreen', label: 'Contact Us', icon: <Feather name="mail" size={20} color={colors.white} /> },
-    { name: 'AboutScreen', label: 'About PawSafe', icon: <Feather name="info" size={20} color={colors.white} /> },
+    { name: 'ContactScreen', label: 'Contact Us', icon: <Feather name="mail" size={18} color={colors.white} /> },
+    { name: 'AboutScreen', label: 'About PawSafe', icon: <Feather name="info" size={18} color={colors.white} /> },
   ];
 
   // Update the navigation handler
   const handleMenuItemPress = (screenName) => {
     try {
-       console.log('Attempting to navigate to:', screenName);
+      console.log('Attempting to navigate to:', screenName);
       navigation.navigate(screenName);
       onClose();
     } catch (error) {
       console.error('Navigation error:', error);
-      // Handle error or show a message to the user
       onClose();
     }
   };
-
 
   const itemAnimations = useRef([...menuItems, ...supportItems].map(() => new Animated.Value(0))).current;
 
@@ -58,20 +65,20 @@ const Sidebar = ({ isOpen, onClose }) => {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 350, // Slightly faster animation
           easing: Easing.out(Easing.exp),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 300,
+          duration: 250,
           useNativeDriver: true,
         }),
         ...itemAnimations.map((anim, index) =>
           Animated.timing(anim, {
             toValue: 1,
-            duration: 500,
-            delay: 100 + index * 50,
+            duration: 400,
+            delay: 80 + index * 40, // Slightly faster stagger
             easing: Easing.out(Easing.quad),
             useNativeDriver: true,
           })
@@ -80,14 +87,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     } else {
       Animated.parallel([
         Animated.timing(slideAnim, {
-          toValue: -width, // Use screen width here
-          duration: 300,
+          toValue: -SIDEBAR_WIDTH,
+          duration: 250, // Faster close animation
           easing: Easing.in(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 200,
+          duration: 150,
           useNativeDriver: true,
         }),
         ...itemAnimations.map(anim =>
@@ -101,10 +108,8 @@ const Sidebar = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-
-
   // Only render the sidebar when it's open or animating
-  if (!isOpen && slideAnim._value === -width) {
+  if (!isOpen && slideAnim._value === -SIDEBAR_WIDTH) {
     return null;
   }
 
@@ -120,7 +125,10 @@ const Sidebar = ({ isOpen, onClose }) => {
         </TouchableOpacity>
       )}
 
-      <Animated.View style={[styles.sidebar, { transform: [{ translateX: slideAnim }] }]}>
+      <Animated.View style={[styles.sidebar, { 
+        width: SIDEBAR_WIDTH,
+        transform: [{ translateX: slideAnim }] 
+      }]}>
         <View style={styles.sidebarContent}>
           <View style={styles.header}>
             <View style={styles.logoContainer}>
@@ -128,7 +136,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               <Text style={styles.headerSubtitle}>For animal welfare</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.white} />
+              <Ionicons name="close" size={22} color={colors.white} />
             </TouchableOpacity>
           </View>
 
@@ -143,7 +151,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {
                       translateX: itemAnimations[index].interpolate({
                         inputRange: [0, 1],
-                        outputRange: [-50, 0],
+                        outputRange: [-30, 0], // Reduced slide distance
                       }),
                     },
                   ],
@@ -157,7 +165,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {item.icon}
                   </View>
                   <Text style={styles.menuText}>{item.label}</Text>
-                  <Feather name="chevron-right" size={16} color={colors.darkGray} />
+                  <Feather name="chevron-right" size={14} color={colors.darkGray} />
                 </TouchableOpacity>
               </Animated.View>
             ))}
@@ -174,7 +182,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {
                       translateX: itemAnimations[index + menuItems.length].interpolate({
                         inputRange: [0, 1],
-                        outputRange: [-50, 0],
+                        outputRange: [-30, 0],
                       }),
                     },
                   ],
@@ -188,7 +196,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     {item.icon}
                   </View>
                   <Text style={styles.menuText}>{item.label}</Text>
-                  <Feather name="chevron-right" size={16} color={colors.darkGray} />
+                  <Feather name="chevron-right" size={14} color={colors.darkGray} />
                 </TouchableOpacity>
               </Animated.View>
             ))}
@@ -209,8 +217,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: '85%',
-    maxWidth: 320,
     height: '100%',
     zIndex: 100,
     elevation: 20,
@@ -241,62 +247,62 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 24,
-    paddingBottom: 16,
-    marginBottom: 10,
+    paddingHorizontal: 20, // Reduced padding
+    paddingBottom: 14,
+    marginBottom: 8,
   },
   logoContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
+    fontSize: 24, // Slightly smaller
     fontWeight: '700',
     color: colors.white,
-    fontFamily: 'System', // Use your custom font here if available
+    fontFamily: 'System',
     letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: 13, // Slightly smaller
     color: colors.lightGray,
-    marginTop: 4,
+    marginTop: 3,
     fontFamily: 'System',
     letterSpacing: 0.3,
   },
   closeButton: {
-    padding: 8,
-    marginTop: -8,
-    marginRight: -8,
+    padding: 6, // Reduced padding
+    marginTop: -6,
+    marginRight: -6,
   },
   menuContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: 12, // Reduced padding
+    paddingBottom: 16,
   },
   sectionTitle: {
     color: colors.lightGray,
-    fontSize: 13,
+    fontSize: 12, // Slightly smaller
     fontWeight: '600',
-    marginTop: 20,
-    marginBottom: 12,
-    marginLeft: 16,
+    marginTop: 16,
+    marginBottom: 10,
+    marginLeft: 12,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    marginBottom: 6,
+    paddingVertical: 12, // Reduced padding
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 24,
+    width: 20, // Reduced width
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12, // Reduced margin
   },
   menuText: {
     color: colors.white,
-    fontSize: 16,
+    fontSize: 15, // Slightly smaller
     fontWeight: '500',
     flex: 1,
     fontFamily: 'System',
@@ -304,23 +310,23 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 16,
-    marginHorizontal: 16,
+    marginVertical: 12, // Reduced margin
+    marginHorizontal: 12,
   },
   footer: {
-    padding: 24,
-    paddingTop: 16,
+    padding: 20, // Reduced padding
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
   },
   footerText: {
-    fontSize: 12,
+    fontSize: 11, // Slightly smaller
     color: colors.darkGray,
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 3,
   },
   footerCopyright: {
-    fontSize: 12,
+    fontSize: 11, // Slightly smaller
     color: colors.darkGray,
     textAlign: 'center',
   },

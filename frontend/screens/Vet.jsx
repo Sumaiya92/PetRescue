@@ -329,10 +329,7 @@ const VeterinaryFinder = () => {
       <Text style={styles.ratingText}>{item.rating?.toFixed(1) || '4.5'}</Text>
       <MaterialIcons name="star" size={12} color={colors.white} />
     </View>
-    <View style={styles.distancePill}>
-      <MaterialIcons name="directions-walk" size={12} color={colors.white} />
-      <Text style={styles.distanceText}>{formatDistance(item.distance)}</Text>
-    </View>
+   
   </View>
 </View>
       
@@ -580,7 +577,7 @@ const VeterinaryFinder = () => {
           renderItem={renderVetItem}
           keyExtractor={(item, index) => item._id || `vet-${index}`}
           ListEmptyComponent={renderEmpty}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent,{ paddingBottom: 100 }]} 
           refreshing={refreshing}
           onRefresh={() => {
             setRefreshing(true);

@@ -21,8 +21,8 @@ import {
 import * as Haptics from "expo-haptics";
 import { FadeIn, FadeInRight, FadeInUp } from "react-native-reanimated";
 import BASE_URL from "./config";
-
 import { useNavigation } from "@react-navigation/native";
+
 // Modern color palette with vibrant accents
 export const colors = {
   primary: "#5D8BF4", // Vibrant blue
@@ -47,6 +47,7 @@ export const colors = {
   accentPink: "#F472B6",
   rewardGold: "#D97706",
 };
+
 const AUTO_SCROLL_INTERVAL = 5000; // 5 seconds
 
 const { width } = Dimensions.get("window");
@@ -163,31 +164,31 @@ const HomeScreen = () => {
     }
   };
 
- const fetchMissingPets = async () => {
-  setLoadingMissing(true);
-  try {
-    const response = await fetch(`${BASE_URL}/lostfound`);
-    const data = await response.json();
-    
-    // Client-side filtering for lost pets
-    const lostPets = data.filter(pet => 
-      pet.status && pet.status.toLowerCase() === "lost"
-    );
-    
-    // Process the data as before
-    const processedData = lostPets.map(pet => ({
-      ...pet,
-      _id: pet._id || `temp-${Math.random().toString(36).substr(2, 9)}`,
-    }));
-    
-    setMissingPets(getRandomItems(processedData, 5));
-  } catch (error) {
-    console.error("Error fetching missing pets:", error);
-    setMissingPets([]);
-  } finally {
-    setLoadingMissing(false);
-  }
-};
+  const fetchMissingPets = async () => {
+    setLoadingMissing(true);
+    try {
+      const response = await fetch(`${BASE_URL}/lostfound`);
+      const data = await response.json();
+      
+      // Client-side filtering for lost pets
+      const lostPets = data.filter(pet => 
+        pet.status && pet.status.toLowerCase() === "lost"
+      );
+      
+      // Process the data as before
+      const processedData = lostPets.map(pet => ({
+        ...pet,
+        _id: pet._id || `temp-${Math.random().toString(36).substr(2, 9)}`,
+      }));
+      
+      setMissingPets(getRandomItems(processedData, 5));
+    } catch (error) {
+      console.error("Error fetching missing pets:", error);
+      setMissingPets([]);
+    } finally {
+      setLoadingMissing(false);
+    }
+  };
 
   const getRandomItems = (array, count) => {
     if (!array || array.length === 0) return [];
@@ -281,6 +282,70 @@ const HomeScreen = () => {
     }
   };
 
+  const quickActionItems = [
+    {
+      icon: "paw",
+      label: "Adopt",
+      action: "AdoptionTab",
+      color: colors.primary,
+      iconLib: "FontAwesome5",
+    },
+    {
+      icon: "search",
+      label: "Lost",
+      action: "ReportTab",
+      color: colors.warning,
+      iconLib: "Ionicons",
+    },
+    {
+      icon: "gift",
+      label: "Donate",
+      action: "Donate",
+      color: colors.accentPink,
+      iconLib: "FontAwesome5",
+    },
+    {
+      icon: "qr-code",
+      label: "Scan",
+      action: "PetScanner",
+      color: colors.secondary,
+      iconLib: "Ionicons",
+    },
+  ];
+
+  const petTips = [
+    {
+      title: "First Night Home",
+      desc: "Make your pet's transition smooth and stress-free",
+      icon: "moon",
+      color: colors.accentPurple,
+    },
+    {
+      title: "Training Basics",
+      desc: "Essential commands every pet should know",
+      icon: "graduation-cap",
+      color: colors.primary,
+    },
+    {
+      title: "Health Check",
+      desc: "Signs your pet needs veterinary attention",
+      icon: "heartbeat",
+      color: colors.secondary,
+    },
+    {
+      title: "Nutrition Guide",
+      desc: "Choosing the right food for your pet",
+      icon: "utensils",
+      color: colors.success,
+    },
+    {
+      title: "Grooming 101",
+      desc: "Keeping your pet clean and healthy",
+      icon: "cut",
+      color: colors.accentPink,
+    },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -297,54 +362,31 @@ const HomeScreen = () => {
         </View>
 
         {/* Search Bar */}
-     <TouchableOpacity
-  style={styles.searchContainer}
-  activeOpacity={0.8}
-  onPress={() => navigation.navigate("Search")}
->
-  <Ionicons name="search" size={20} color={colors.darkGray} />
-  <Text style={styles.searchText}>
-    Search pets, shelters, or breeds...
-  </Text>
-</TouchableOpacity>
+        <TouchableOpacity
+          style={styles.searchContainer}
+          activeOpacity={0.8}
+          onPress={() => navigation.navigate("Search")}
+        >
+          <Ionicons name="search" size={20} color={colors.darkGray} />
+          <Text style={styles.searchText}>
+            Search pets, shelters, or breeds...
+          </Text>
+        </TouchableOpacity>
 
-        {/* Quick Actions */}
+        {/* Quick Actions - Fixed */}
         <View style={styles.quickActions}>
-          {[
-            {
-              icon: "paw",
-              label: "Adopt",
-              action: "Adoption",
-              color: colors.primary,
-              iconLib: "FontAwesome5",
-            },
-            {
-              icon: "search",
-              label: "Lost",
-              action: "LostFoundTab",
-              color: colors.warning,
-              iconLib: "Ionicons",
-            },
-           {
-  icon: "gift",
-  label: "Donate",
-  action: "Donation", // or "DonationTab" if it's in tabs
-  color: colors.accentPink,
-  iconLib: "FontAwesome5",
-},
-
-            {
-              icon: "qr-code",
-              label: "Scan",
-              action: "ScannerTab",
-              color: colors.secondary,
-              iconLib: "Ionicons",
-            },
-          ].map((item, index) => (
+          {quickActionItems.map((item, index) => (
             <TouchableOpacity
               key={index}
               style={styles.actionButton}
-              onPress={() => navigation.navigate(item.action)}
+              onPress={() => {
+                handlePress();
+                if (item.action === "AdoptionTab" || item.action === "ReportTab") {
+                  navigation.navigate(item.action);
+                } else {
+                  navigation.navigate(item.action);
+                }
+              }}
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -576,190 +618,22 @@ const HomeScreen = () => {
           </LinearGradient>
         </View>
 
-        {/* Lost & Loved (Missing Pets) - Enhanced */}
-   {/* Lost & Loved (Missing Pets) - Matching Pawsome Companions Style */}
-<View style={styles.section}>
-  <View style={styles.sectionHeader}>
-    <View>
-      <Text style={styles.sectionTitle}>Lost & Loved</Text>
-      <Text style={styles.sectionSubtitle}>
-        Help reunite these pets with their families
-      </Text>
-    </View>
-    <TouchableOpacity
-      style={styles.seeAllButton}
-      onPress={() =>
-        navigation.navigate("ReportTab", {
-          screen: "LostFoundScreen",
-        })
-      }
-      activeOpacity={0.7}
-    >
-      <Text style={styles.seeAllText}>View All</Text>
-      <Ionicons
-        name="chevron-forward"
-        size={16}
-        color={colors.primary}
-      />
-    </TouchableOpacity>
-  </View>
-
-  {loadingMissing ? (
-    renderLoading()
-  ) : missingPets.length > 0 ? (
-    <View style={styles.sliderContainer}>
-      <View style={styles.navigationControls}>
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() =>
-            handleScrollPrev(
-              missingScrollRef,
-              currentMissingIndex,
-              setCurrentMissingIndex,
-              missingPets.length
-            )
-          }
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="chevron-back-circle"
-            size={30}
-            color={colors.primary}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navButton}
-          onPress={() =>
-            handleScrollNext(
-              missingScrollRef,
-              currentMissingIndex,
-              setCurrentMissingIndex,
-              missingPets.length
-            )
-          }
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="chevron-forward-circle"
-            size={30}
-            color={colors.primary}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        ref={missingScrollRef}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.horizontalScroll}
-        snapToInterval={CARD_WIDTH + 15}
-        decelerationRate={0.85}
-        pagingEnabled={false}
-        snapToAlignment="center"
-        onMomentumScrollEnd={handleMissingScroll}
-      >
-        {missingPets.map((pet, index) => (
-          <Animated.View
-            key={pet._id || `missing-${index}`}
-            style={styles.sliderCardWrapper}
-          >
-            <TouchableOpacity
-              style={styles.featuredCard}
-              onPress={() => navigateToLostPetDetails(pet)}
-              activeOpacity={0.9}
-            >
-              <Image
-                source={{
-                  uri: pet.image || pet.imageUrl || pet.imageUrls?.[0] || defaultImage,
-                }}
-                style={styles.featuredImage}
-                onError={() => {
-                  // Handle image error if needed
-                }}
-              />
-
-              <LinearGradient
-                colors={[
-                  "transparent",
-                  "rgba(0,0,0,0.7)",
-                  "rgba(0,0,0,0.85)",
-                ]}
-                style={styles.featuredGradient}
-              />
-
-              <View style={styles.featuredInfo}>
-                <View>
-                  <Text style={styles.featuredName}>
-                    {pet.name || "Unknown Pet"}
-                  </Text>
-                  <Text style={styles.featuredType}>
-                    {pet.breed || "Unknown Breed"}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.detailsButton}
-                  onPress={() => navigateToLostPetDetails(pet)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.detailsButtonText}>Help Find</Text>
-                </TouchableOpacity>
-              </View>
-
-              {pet.reward && (
-                <Animated.View
-                  style={styles.rewardTag}
-                  entering={FadeIn.duration(400).delay(100)}
-                >
-                  <FontAwesome5 name="award" size={12} color="white" />
-                  <Text style={styles.rewardText}>REWARD</Text>
-                </Animated.View>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        ))}
-      </ScrollView>
-
-      {/* Centered Pagination Indicators */}
-      <View style={styles.paginationContainer}>
-        {missingPets.map((_, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.paginationDot,
-              currentMissingIndex === index && styles.paginationDotActive,
-            ]}
-            onPress={() => {
-              scrollToIndex(missingScrollRef, index, CARD_WIDTH + 15);
-              setCurrentMissingIndex(index);
-              handlePress();
-            }}
-          />
-        ))}
-      </View>
-    </View>
-  ) : (
-    <View style={styles.noDataContainer}>
-      <Text style={styles.noDataText}>
-        No missing pets reported recently
-      </Text>
-    </View>
-  )}
-</View>
-
-        {/* Pet Parenting Guide (Adoption Tips) - Enhanced */}
-        <View style={[styles.section, { marginBottom: 30 }]}>
+        {/* Lost & Loved (Missing Pets) */}
+        <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Pet Parenting Guide</Text>
+              <Text style={styles.sectionTitle}>Lost & Loved</Text>
               <Text style={styles.sectionSubtitle}>
-                Essential tips for new pet owners
+                Help reunite these pets with their families
               </Text>
             </View>
             <TouchableOpacity
               style={styles.seeAllButton}
-              onPress={() => navigation.navigate("Resources")}
+              onPress={() =>
+                navigation.navigate("ReportTab", {
+                  screen: "LostFoundScreen",
+                })
+              }
               activeOpacity={0.7}
             >
               <Text style={styles.seeAllText}>View All</Text>
@@ -771,60 +645,203 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.tipsContainer}>
-            {[
-              {
-                title: "First Night Home",
-                desc: "Make your pet's transition smooth and stress-free",
-                icon: "moon",
-                color: colors.accentPurple,
-              },
-              {
-                title: "Training Basics",
-                desc: "Essential commands every pet should know",
-                icon: "graduation-cap",
-                color: colors.primary,
-              },
-              {
-                title: "Health Check",
-                desc: "Signs your pet needs veterinary attention",
-                icon: "heartbeat",
-                color: colors.secondary,
-              },
-            ].map((tip, index) => (
-              <Animated.View
-                key={index}
-                entering={FadeInUp.duration(400).delay(index * 100)}
-              >
+          {loadingMissing ? (
+            renderLoading()
+          ) : missingPets.length > 0 ? (
+            <View style={styles.sliderContainer}>
+              <View style={styles.navigationControls}>
                 <TouchableOpacity
-                  style={styles.tipCard}
+                  style={styles.navButton}
                   onPress={() =>
-                    navigation.navigate("TipDetails", { id: index + 1 })
+                    handleScrollPrev(
+                      missingScrollRef,
+                      currentMissingIndex,
+                      setCurrentMissingIndex,
+                      missingPets.length
+                    )
                   }
-                  activeOpacity={0.9}
+                  activeOpacity={0.7}
                 >
-                  <View
-                    style={[
-                      styles.tipIconContainer,
-                      { backgroundColor: `${tip.color}20` },
-                    ]}
-                  >
-                    <FontAwesome5 name={tip.icon} size={20} color={tip.color} />
-                  </View>
-                  <Text style={styles.tipTitle}>{tip.title}</Text>
-                  <Text style={styles.tipText}>{tip.desc}</Text>
-                  <View style={styles.readMoreContainer}>
-                    <Text style={styles.readMore}>Learn More</Text>
-                    <Ionicons
-                      name="chevron-forward"
-                      size={14}
-                      color={colors.primary}
-                    />
-                  </View>
+                  <Ionicons
+                    name="chevron-back-circle"
+                    size={30}
+                    color={colors.primary}
+                  />
                 </TouchableOpacity>
-              </Animated.View>
-            ))}
+
+                <TouchableOpacity
+                  style={styles.navButton}
+                  onPress={() =>
+                    handleScrollNext(
+                      missingScrollRef,
+                      currentMissingIndex,
+                      setCurrentMissingIndex,
+                      missingPets.length
+                    )
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="chevron-forward-circle"
+                    size={30}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                ref={missingScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.horizontalScroll}
+                snapToInterval={CARD_WIDTH + 15}
+                decelerationRate={0.85}
+                pagingEnabled={false}
+                snapToAlignment="center"
+                onMomentumScrollEnd={handleMissingScroll}
+              >
+                {missingPets.map((pet, index) => (
+                  <Animated.View
+                    key={pet._id || `missing-${index}`}
+                    style={styles.sliderCardWrapper}
+                  >
+                    <TouchableOpacity
+                      style={styles.featuredCard}
+                      onPress={() => navigateToLostPetDetails(pet)}
+                      activeOpacity={0.9}
+                    >
+                      <Image
+                        source={{
+                          uri: pet.image || pet.imageUrl || pet.imageUrls?.[0] || defaultImage,
+                        }}
+                        style={styles.featuredImage}
+                      />
+
+                      <LinearGradient
+                        colors={[
+                          "transparent",
+                          "rgba(0,0,0,0.7)",
+                          "rgba(0,0,0,0.85)",
+                        ]}
+                        style={styles.featuredGradient}
+                      />
+
+                      <View style={styles.featuredInfo}>
+                        <View>
+                          <Text style={styles.featuredName}>
+                            {pet.name || "Unknown Pet"}
+                          </Text>
+                          <Text style={styles.featuredType}>
+                            {pet.breed || "Unknown Breed"}
+                          </Text>
+                        </View>
+
+                        <TouchableOpacity
+                          style={styles.detailsButton}
+                          onPress={() => navigateToLostPetDetails(pet)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.detailsButtonText}>Help Find</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {pet.reward && (
+                        <Animated.View
+                          style={styles.rewardTag}
+                          entering={FadeIn.duration(400).delay(100)}
+                        >
+                          <FontAwesome5 name="award" size={12} color="white" />
+                          <Text style={styles.rewardText}>REWARD</Text>
+                        </Animated.View>
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </ScrollView>
+
+              {/* Centered Pagination Indicators */}
+              <View style={styles.paginationContainer}>
+                {missingPets.map((_, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.paginationDot,
+                      currentMissingIndex === index && styles.paginationDotActive,
+                    ]}
+                    onPress={() => {
+                      scrollToIndex(missingScrollRef, index, CARD_WIDTH + 15);
+                      setCurrentMissingIndex(index);
+                      handlePress();
+                    }}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.noDataContainer}>
+              <Text style={styles.noDataText}>
+                No missing pets reported recently
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Pet Parenting Guide */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionTitle}>Pet Parenting Guide</Text>
+              <Text style={styles.sectionSubtitle}>
+                Essential tips for new pet owners
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.seeAllButton}
+              onPress={() => navigation.navigate("Tips")}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.seeAllText}>View All</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
           </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tipsScrollContainer}
+          >
+            {petTips.map((tip, index) => (
+              <TouchableOpacity
+                key={index}
+                style={styles.tipCard}
+                onPress={() => navigation.navigate("Tips")}
+                activeOpacity={0.9}
+              >
+                <View
+                  style={[
+                    styles.tipIconContainer,
+                    { backgroundColor: `${tip.color}20` },
+                  ]}
+                >
+                  <FontAwesome5 name={tip.icon} size={20} color={tip.color} />
+                </View>
+                <Text style={styles.tipTitle}>{tip.title}</Text>
+                <Text style={styles.tipText}>{tip.desc}</Text>
+                <View style={styles.readMoreContainer}>
+                  <Text style={styles.readMore}>Learn More</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={colors.primary}
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1196,21 +1213,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  tipsContainer: {
-    flexDirection: "row",
+   tipsScrollContainer: {
     paddingHorizontal: 24,
-    overflow: "visible",
+    paddingBottom: 50,
   },
   tipCard: {
-    width: width * 0.6,
+    width: 160,
+    backgroundColor: colors.white,
     borderRadius: 16,
     padding: 16,
     marginRight: 16,
-    backgroundColor: colors.white,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
+    shadowRadius: 4,
     elevation: 3,
   },
   tipIconContainer: {
@@ -1229,9 +1245,10 @@ const styles = StyleSheet.create({
   },
   tipText: {
     fontSize: 13,
-    lineHeight: 20,
+    lineHeight: 18,
     color: colors.darkGray,
-    marginBottom: 12,
+    marginBottom: 16,
+    height: 36, // Fixed height to ensure consistent layout
   },
   readMoreContainer: {
     flexDirection: "row",
@@ -1242,10 +1259,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: colors.primary,
     marginRight: 4,
-  },
-  sliderContainer: {
-    position: "relative",
-    marginTop: 12,
   },
 
   // Navigation controls (left/right arrows)
@@ -1453,6 +1466,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
+  
 });
 
 export default HomeScreen;

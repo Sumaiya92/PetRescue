@@ -18,49 +18,36 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { MaterialIcons, FontAwesome5, Ionicons, AntDesign, Feather } from '@expo/vector-icons';
 import BASE_URL from './config';
+import { useRoute } from '@react-navigation/native';
 
-// Screen dimensions for responsive layout
 const { width } = Dimensions.get('window');
 const cardWidth = width * 0.44;
 
-// App color palette
 export const colors = {
-  // Primary colors
-  primary: '#4A6FA5',       // Soft blue (like Aussie eyes)
-  primaryLight: '#E8F0FE',  // Very light blue for backgrounds
-  primaryDark: '#2C4A7A',   // Darker blue for text/accents
-  
-  // Secondary colors
-  secondary: '#FF7E5F',     // Coral accent (paws/noses)
-  secondaryLight: '#FFE8E2', // Light coral for highlights
-  
-  // Neutrals
+  primary: '#4A6FA5',
+  primaryLight: '#E8F0FE',
+  primaryDark: '#2C4A7A',
+  lost: '#E53E3E',
+  lostLight: '#FED7D7',
+  found: '#48BB78',
+  foundLight: '#C6F6D5',
+  resolved: '#4299E1',
+  resolvedLight: '#BEE3F8',
+  secondary: '#FF7E5F',
+  secondaryLight: '#FFE8E2',
   white: '#FFFFFF',
-  lightGray: '#F5F7FA',     // Background color
-  mediumGray: '#E1E5EB',    // Borders
-  darkGray: '#6B7C93',      // Secondary text
-  black: '#2D3748',         // Primary text
-  
-  // Status colors
-  success: '#48BB78',       // Green (for available pets)
-  warning: '#ED8936',       // Orange (urgent notices)
-  danger: '#E53E3E',        // Red (important alerts)
-  info: '#4299E1',          // Blue (information)
-  
-  // Pet-related colors
-  furLight: '#F6AD55',      // Light fur tones
-  furMedium: '#C05621',     // Medium fur tones
-  furDark: '#723F13',       // Dark fur tones
-  
-  // Special accents
-  highlight: '#FEFCBF',     // Yellow highlight
-  rewardGold: '#D69E2E',    // Gold for reward badges
+  lightGray: '#F5F7FA',
+  mediumGray: '#E1E5EB',
+  darkGray: '#6B7C93',
+  black: '#2D3748',
+  warning: '#ED8936',
+  info: '#4299E1',
+  highlight: '#FEFCBF',
 };
 
-
 const LostFoundPetsScreen = ({ navigation }) => {
-  // State management
-  const [activeTab, setActiveTab] = useState('lost');
+  const route = useRoute();
+  const [activeTab, setActiveTab] = useState(route.params?.initialTab || 'lost');
   const [pets, setPets] = useState([]);
   const [filteredPets, setFilteredPets] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -69,31 +56,11 @@ const LostFoundPetsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [fabAnimation] = useState(new Animated.Value(1));
-  const [scrollY] = useState(new Animated.Value(0));
-  
-  // Filter states
   const [filters, setFilters] = useState({
     petType: 'all',
     location: '',
     searchQuery: '',
     sortBy: 'recent',
-  });
-   const navigateToLostPetDetails = (pet) => {
-    // Only navigate if pet and pet._id exist
-    if (pet && pet._id) {
-
-      navigation.navigate("LostPetDetails", { petId: pet._id });
-    } else {
-      console.warn("Cannot navigate to pet details: Missing pet ID");
-    }
-  };
-
-  // Animation references
-  const filterButtonScale = useRef(new Animated.Value(1)).current;
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [160, 60],
-    extrapolate: 'clamp',
   });
 
   const initialFormState = {
@@ -113,40 +80,53 @@ const LostFoundPetsScreen = ({ navigation }) => {
 
   const [petForm, setPetForm] = useState(initialFormState);
 
-  // Animation for FAB button
-  const animateFab = () => {
-    Animated.sequence([
-      Animated.timing(fabAnimation, {
-        toValue: 0.8,
-        duration: 100,
-        easing: Easing.ease,
-        useNativeDriver: true
-      }),
-      Animated.timing(fabAnimation, {
-        toValue: 1,
-        duration: 100,
-        easing: Easing.ease,
-        useNativeDriver: true
-      })
-    ]).start();
+  // Get appropriate icon for pet type
+  const getPetIcon = (type) => {
+    switch (type.toLowerCase()) {
+      case 'dog':
+        return <FontAwesome5 name="dog" size={14} color={colors.darkGray} />;
+      case 'cat':
+        return <FontAwesome5 name="cat" size={14} color={colors.darkGray} />;
+      case 'bird':
+        return <FontAwesome5 name="dove" size={14} color={colors.darkGray} />;
+      case 'rabbit':
+        return <FontAwesome5 name="rabbit" size={14} color={colors.darkGray} />;
+      default:
+        return <FontAwesome5 name="paw" size={14} color={colors.darkGray} />;
+    }
   };
 
-  // Animation for filter button
-  const animateFilterButton = () => {
-    Animated.sequence([
-      Animated.timing(filterButtonScale, {
-        toValue: 0.9,
-        duration: 100,
-        easing: Easing.ease,
-        useNativeDriver: true
-      }),
-      Animated.timing(filterButtonScale, {
-        toValue: 1,
-        duration: 100,
-        easing: Easing.ease,
-        useNativeDriver: true
-      })
-    ]).start();
+ const getStatusInfo = (pet) => {
+  const isLost = pet.status === 'lost';
+  const isResolved = isLost ? pet.isFound : pet.isClaimed;
+  
+  if (isLost) {
+    // Lost pet logic
+    return {
+      baseColor: colors.lost,        // Red for "LOST"
+      resolvedColor: colors.found,   // Green for "FOUND"
+      statusText: 'LOST',
+      resolvedText: 'FOUND',
+      actionText: pet.isFound ? 'Found ✓' : 'Mark Found',
+      isResolved: isResolved,
+    };
+  } else {
+    // Found pet logic - matching the lost tab pattern
+    return {
+      baseColor: colors.lost,        // Red for "Mark Claimed" (unclaimed found pets)
+      resolvedColor: colors.found,   // Green for "Claimed ✓" (claimed found pets)
+      statusText: 'FOUND',
+      resolvedText: 'CLAIMED',
+      actionText: pet.isClaimed ? 'Claimed ✓' : 'Mark Claimed',
+      isResolved: isResolved,
+    };
+  }
+};;
+
+  const navigateToLostPetDetails = (pet) => {
+    if (pet && pet._id) {
+      navigation.navigate("LostPetDetails", { petId: pet._id });
+    }
   };
 
   // Fetch pets data from API
@@ -172,7 +152,7 @@ const LostFoundPetsScreen = ({ navigation }) => {
   };
 
   // Apply filters to pets data
- const applyFilters = (data, tab, currentFilters) => {
+  const applyFilters = (data, tab, currentFilters) => {
     let filtered = data.filter(pet => pet.status === tab);
     
     if (currentFilters.petType !== 'all') {
@@ -370,10 +350,26 @@ const LostFoundPetsScreen = ({ navigation }) => {
     fetchPets();
   };
 
-  // Render pet card
-   const renderPetCard = ({ item, index }) => {
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      petType: 'all',
+      location: '',
+      searchQuery: '',
+      sortBy: 'recent',
+    });
+  };
+
+  // Apply filters and close modal
+  const applyFiltersAndClose = () => {
+    setFilterModalVisible(false);
+    applyFilters(pets, activeTab, filters);
+  };
+
+  // Render pet card with consistent colors and better layout
+  const renderPetCard = ({ item, index }) => {
     const isEven = index % 2 === 0;
-    const statusColor = item.status === 'lost' ? colors.danger : colors.success;
+    const statusInfo = getStatusInfo(item);
     
     return (
       <TouchableOpacity 
@@ -382,46 +378,51 @@ const LostFoundPetsScreen = ({ navigation }) => {
           { 
             marginLeft: isEven ? 16 : 8, 
             marginRight: isEven ? 8 : 16,
-            height: 220 // Fixed height for all cards
           }
         ]}
         activeOpacity={0.8}
         onPress={() => navigateToLostPetDetails(item)}
-        
-       
       >
         <View style={styles.cardImageContainer}>
           {item.image ? (
             <Image
               source={{ 
-                uri: item.image.startsWith('http') || item.image.startsWith('https')
-                  ? item.image 
-                  : `${BASE_URL}/${item.image.replace(/\\/g, '/')}`
+                uri: item.image.startsWith('http') ? item.image : `${BASE_URL}/${item.image.replace(/\\/g, '/')}`
               }}
               style={styles.cardImage}
               resizeMode="cover"
-              onError={(e) => console.log('Image loading error:', e.nativeEvent.error)}
             />
           ) : (
             <View style={[styles.cardImage, styles.imagePlaceholder]}>
-              <FontAwesome5 name="paw" size={32} color={colors.primaryLight} />
+              {getPetIcon(item.type)}
             </View>
           )}
           
-          <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
+          <View style={[
+            styles.statusBadge, 
+            { 
+              backgroundColor: statusInfo.isResolved ? statusInfo.resolvedColor : statusInfo.baseColor
+            }
+          ]}>
             <Text style={styles.statusText}>
-              {item.status === 'lost' ? 'LOST' : 'FOUND'}
-              {(item.isFound || item.isClaimed) ? ' ✓' : ''}
+              {statusInfo.isResolved ? statusInfo.resolvedText : statusInfo.statusText}
             </Text>
           </View>
         </View>
         
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+          {/* {act<Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text> */}
+          {
+            activeTab === 'lost' && 
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.name || 'Unknown Pet'}
+              </Text>
+  }
           
           <View style={styles.cardInfo}>
             <View style={styles.infoRow}>
-             
+              {getPetIcon(item.type)}
+              <Text style={styles.infoText} numberOfLines={1}>{item.type}</Text>
             </View>
             
             <View style={styles.infoRow}>
@@ -430,78 +431,71 @@ const LostFoundPetsScreen = ({ navigation }) => {
             </View>
           </View>
           
-          <View style={styles.cardActions}>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: statusColor }]}
-              onPress={() => {
-                if (item.status === 'lost') {
-                  updatePetStatus(item._id, { isFound: !item.isFound });
-                } else {
-                  updatePetStatus(item._id, { isClaimed: !item.isClaimed });
-                }
-              }}
-            >
-              <Text style={styles.actionButtonText}>
-                {item.status === 'lost' 
-                  ? (item.isFound ? 'Found ✓' : 'Mark Found')
-                  : (item.isClaimed ? 'Claimed ✓' : 'Mark Claimed')}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity 
+            style={[
+              styles.actionButton, 
+              { 
+                backgroundColor: statusInfo.isResolved ? statusInfo.resolvedColor : statusInfo.baseColor,
+              }
+            ]}
+            onPress={() => {
+              if (item.status === 'lost') {
+                updatePetStatus(item._id, { isFound: !item.isFound });
+              } else {
+                updatePetStatus(item._id, { isClaimed: !item.isClaimed });
+              }
+            }}
+          >
+            <Text style={styles.actionButtonText}>
+              {statusInfo.actionText}
+            </Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
   };
 
-  if (loading && pets.length === 0) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading pets...</Text>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* Simplified Header */}
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lost & Found Pets</Text>
-        <Text style={styles.headerSubtitle}>Help reunite pets with their families</Text>
-        
-        <View style={styles.searchFilterContainer}>
-          <View style={styles.searchContainer}>
-            <Feather name="search" size={18} color={colors.darkGray} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search pets..."
-              placeholderTextColor={colors.darkGray}
-              value={filters.searchQuery}
-              onChangeText={(text) => setFilters({...filters, searchQuery: text})}
-            />
-          </View>
-          
+        <Text style={styles.headerTitle}>Lost & Found</Text>
+        <Animated.View style={[styles.addButton, { transform: [{ scale: fabAnimation }]}]}>
           <TouchableOpacity 
-            style={styles.filterButton}
-            onPress={() => setFilterModalVisible(true)}
+            onPress={() => {
+              setModalVisible(true);
+              setPetForm({...initialFormState, status: activeTab});
+            }}
           >
-            <Feather name="sliders" size={18} color={colors.primary} />
+            <AntDesign name="plus" size={18} color="#FFF" />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </View>
 
-      {/* Tabs Section */}
+      {/* Search and Filter */}
+      <View style={styles.searchContainer}>
+        <Feather name="search" size={16} color={colors.darkGray} style={styles.searchIcon} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search pets..."
+          placeholderTextColor={colors.darkGray}
+          value={filters.searchQuery}
+          onChangeText={(text) => setFilters({...filters, searchQuery: text})}
+        />
+        <TouchableOpacity 
+          style={styles.filterButton}
+          onPress={() => setFilterModalVisible(true)}
+        >
+          <Feather name="sliders" size={16} color={colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === 'lost' && styles.activeTab]}
           onPress={() => setActiveTab('lost')}
         >
-          <FontAwesome5 
-            name="search" 
-            size={14} 
-            color={activeTab === 'lost' ? colors.white : colors.darkGray} 
-            style={styles.tabIcon}
-          />
           <Text style={[styles.tabText, activeTab === 'lost' && styles.activeTabText]}>
             Lost Pets
           </Text>
@@ -510,88 +504,38 @@ const LostFoundPetsScreen = ({ navigation }) => {
           style={[styles.tab, activeTab === 'found' && styles.activeTab]}
           onPress={() => setActiveTab('found')}
         >
-          <FontAwesome5 
-            name="paw" 
-            size={14} 
-            color={activeTab === 'found' ? colors.white : colors.darkGray} 
-            style={styles.tabIcon}
-          />
           <Text style={[styles.tabText, activeTab === 'found' && styles.activeTabText]}>
             Found Pets
           </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Smart Pet Finder Banner */}
+      {/* Smart Finder Banner - Simplified */}
       <TouchableOpacity 
         style={styles.smartFinderBanner}
-        activeOpacity={0.9}
         onPress={() => navigation.navigate('PetSearch')}
       >
-        <View style={styles.smartFinderIcon}>
-          <FontAwesome5 name="search-location" size={20} color={colors.white} />
-        </View>
-        <View style={styles.smartFinderContent}>
-          <Text style={styles.smartFinderTitle}>Smart Pet Finder</Text>
-          <Text style={styles.smartFinderSubtitle}>Match your pet using our AI tool</Text>
-        </View>
-        <AntDesign name="arrowright" size={20} color={colors.white} />
+        <FontAwesome5 name="search-location" size={16} color={colors.white} />
+        <Text style={styles.smartFinderText}>Smart Pet Finder</Text>
+        <AntDesign name="arrowright" size={16} color={colors.white} />
       </TouchableOpacity>
 
-      {/* Results count */}
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsCount}>
-          {filteredPets.length} {activeTab} pet{filteredPets.length !== 1 ? 's' : ''} found
-        </Text>
-      </View>
-
-      {/* Pets Grid */}
+      {/* Pets List */}
       <FlatList
         data={filteredPets}
         keyExtractor={(item) => item._id}
         renderItem={renderPetCard}
         numColumns={2}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.gridContainer}
+        contentContainerStyle={[styles.gridContainer,{ paddingBottom: 120 }]}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <FontAwesome5 name={activeTab === 'lost' ? 'search' : 'paw'} size={48} color={colors.mediumGray} />
+            <FontAwesome5 name={activeTab === 'lost' ? 'search' : 'paw'} size={32} color={colors.mediumGray} />
             <Text style={styles.emptyTitle}>No {activeTab} pets found</Text>
-            <Text style={styles.emptyText}>
-              Be the first to report a {activeTab} pet in your area
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyButton}
-              onPress={() => {
-                setModalVisible(true);
-                setPetForm({...initialFormState, status: activeTab});
-              }}
-            >
-              <Text style={styles.emptyButtonText}>Report {activeTab === 'lost' ? 'a Lost' : 'Found'} Pet</Text>
-            </TouchableOpacity>
           </View>
         }
       />
-
-      {/* Floating Action Button */}
-      <Animated.View 
-        style={[
-          styles.fab,
-          { transform: [{ scale: fabAnimation }] }
-        ]}
-      >
-        <TouchableOpacity 
-          onPress={() => {
-            setModalVisible(true);
-            setPetForm({...initialFormState, status: activeTab});
-          }}
-          activeOpacity={0.7}
-        >
-          <AntDesign name="plus" size={24} color="#FFF" />
-        </TouchableOpacity>
-      </Animated.View>
 
       {/* Add Pet Modal */}
       <Modal
@@ -601,443 +545,331 @@ const LostFoundPetsScreen = ({ navigation }) => {
         transparent={true}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                Report {activeTab === 'lost' ? 'a Lost' : 'Found'} Pet
-              </Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={resetForm}
-              >
+              <Text style={styles.modalTitle}>Report {activeTab === 'lost' ? 'Lost' : 'Found'} Pet</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
                 <AntDesign name="close" size={20} color={colors.darkGray} />
               </TouchableOpacity>
             </View>
             
-            <ScrollView 
-              contentContainerStyle={styles.modalContent}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Basic Information</Text>
-                
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Pet Name *</Text>
                 <TextInput
-                  placeholder="Pet Name *"
-                  placeholderTextColor={colors.textLight}
+                  style={styles.input}
                   value={petForm.name}
-                  onChangeText={(text) => setPetForm({ ...petForm, name: text })}
-                  style={styles.input}
+                  onChangeText={(text) => setPetForm({...petForm, name: text})}
+                  placeholder="Enter pet's name"
                 />
-                
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Pet Type *</Text>
                 <View style={styles.typeSelector}>
-                  <TouchableOpacity
-                    style={[
-                      styles.typeOption,
-                      petForm.type === 'Dog' && styles.typeOptionActive
-                    ]}
-                    onPress={() => setPetForm({ ...petForm, type: 'Dog' })}
-                  >
-                    <FontAwesome5 
-                      name="dog" 
-                      size={16} 
-                      color={petForm.type === 'Dog' ? colors.white : colors.textMedium} 
-                    />
-                    <Text style={[
-                      styles.typeText,
-                      petForm.type === 'Dog' && styles.typeTextActive
-                    ]}>Dog</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.typeOption,
-                      petForm.type === 'Cat' && styles.typeOptionActive
-                    ]}
-                    onPress={() => setPetForm({ ...petForm, type: 'Cat' })}
-                  >
-                    <FontAwesome5 
-                      name="cat" 
-                      size={16} 
-                      color={petForm.type === 'Cat' ? colors.white : colors.textMedium} 
-                    />
-                    <Text style={[
-                      styles.typeText,
-                      petForm.type === 'Cat' && styles.typeTextActive
-                    ]}>Cat</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.typeOption,
-                      petForm.type === 'Other' && styles.typeOptionActive
-                    ]}
-                    onPress={() => setPetForm({ ...petForm, type: 'Other' })}
-                  >
-                    <FontAwesome5 
-                      name="paw" 
-                      size={16} 
-                      color={petForm.type === 'Other' ? colors.white : colors.textMedium} 
-                    />
-                    <Text style={[
-                      styles.typeText,
-                      petForm.type === 'Other' && styles.typeTextActive
-                    ]}>Other</Text>
-                  </TouchableOpacity>
+                  {['Dog', 'Cat', 'Bird', 'Other'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.typeOption,
+                        petForm.type === type && styles.selectedTypeOption
+                      ]}
+                      onPress={() => setPetForm({...petForm, type})}
+                    >
+                      <Text style={[
+                        styles.typeOptionText,
+                        petForm.type === type && styles.selectedTypeOptionText
+                      ]}>
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-                
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Breed</Text>
                 <TextInput
-                  placeholder="Breed (optional)"
-                  placeholderTextColor={colors.textLight}
+                  style={styles.input}
                   value={petForm.breed}
-                  onChangeText={(text) => setPetForm({ ...petForm, breed: text })}
-                  style={styles.input}
+                  onChangeText={(text) => setPetForm({...petForm, breed: text})}
+                  placeholder="Enter breed (optional)"
                 />
               </View>
-              
-              <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Location & Contact</Text>
-                
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Location *</Text>
                 <TextInput
-                  placeholder="Location where pet was lost/found *"
-                  placeholderTextColor={colors.textLight}
+                  style={styles.input}
                   value={petForm.location}
-                  onChangeText={(text) => setPetForm({ ...petForm, location: text })}
-                  style={styles.input}
-                />
-                
-                <TextInput
-                  placeholder={activeTab === 'lost' ? "Owner's Contact Info *" : "Finder's Contact Info *"}
-                  placeholderTextColor={colors.textLight}
-                  value={activeTab === 'lost' ? petForm.OwnercontactInfo : petForm.findercontactInfo}
-                  onChangeText={(text) => 
-                    setPetForm(
-                      activeTab === 'lost' 
-                        ? { ...petForm, OwnercontactInfo: text }
-                        : { ...petForm, findercontactInfo: text }
-                    )
-                  }
-                  style={styles.input}
-                  keyboardType="phone-pad"
+                  onChangeText={(text) => setPetForm({...petForm, location: text})}
+                  placeholder="Where was the pet lost/found?"
                 />
               </View>
-              
-              <View style={styles.formSection}>
-                <Text style={styles.formSectionTitle}>Details</Text>
-                
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Contact Information *</Text>
                 <TextInput
-                  placeholder="Description (color, distinctive features, etc.) *"
-                  placeholderTextColor={colors.textLight}
-                  value={petForm.description}
-                  onChangeText={(text) => setPetForm({ ...petForm, description: text })}
+                  style={styles.input}
+                  value={activeTab === 'lost' ? petForm.OwnercontactInfo : petForm.findercontactInfo}
+                  onChangeText={(text) => setPetForm({
+                    ...petForm, 
+                    [activeTab === 'lost' ? 'OwnercontactInfo' : 'findercontactInfo']: text
+                  })}
+                  placeholder="Phone number or email"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Description *</Text>
+                <TextInput
                   style={[styles.input, styles.textArea]}
+                  value={petForm.description}
+                  onChangeText={(text) => setPetForm({...petForm, description: text})}
+                  placeholder="Describe the pet's appearance, behavior, etc."
                   multiline
                   numberOfLines={4}
                 />
-                
-                <TouchableOpacity 
-                  style={styles.imageUploadButton} 
-                  onPress={pickImage}
-                >
-                  <FontAwesome5 name="camera" size={16} color={colors.primary} />
-                  <Text style={styles.imageUploadText}>
-                    {imageUri ? 'Change Image' : 'Add Photo'}
-                  </Text>
-                </TouchableOpacity>
-
-                {imageUri && (
-                  <View style={styles.previewContainer}>
-                    <Image source={{ uri: imageUri }} style={styles.previewImage} />
-                    <TouchableOpacity 
-                      style={styles.removeImageButton}
-                      onPress={() => setImageUri(null)}
-                    >
-                      <AntDesign name="close" size={16} color={colors.white} />
-                    </TouchableOpacity>
-                  </View>
-                )}
               </View>
-              
-              <View style={styles.formActions}>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.cancelButton]}
-                  onPress={resetForm}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={[styles.formButton, styles.submitButton]}
-                  onPress={handleSubmit}
-                >
-                  <Text style={styles.submitButtonText}>Submit</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Photo</Text>
+                <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
+                  {imageUri ? (
+                    <Image source={{ uri: imageUri }} style={styles.selectedImage} />
+                  ) : (
+                    <View style={styles.imagePlaceholderButton}>
+                      <AntDesign name="camera" size={24} color={colors.darkGray} />
+                      <Text style={styles.imagePickerText}>Add Photo</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-      <Modal
-        visible={filterModalVisible}
-        animationType="fade"
-        onRequestClose={() => setFilterModalVisible(false)}
-        transparent={true}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, styles.filterModalContainer]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filter Pets</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setFilterModalVisible(false)}
-              >
-                <AntDesign name="close" size={20} color={colors.darkGray} />
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setModalVisible(false)}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                <Text style={styles.submitButtonText}>Submit Report</Text>
               </TouchableOpacity>
             </View>
-            
-            <ScrollView 
-              contentContainerStyle={styles.filterModalContent}
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Pet Type</Text>
-                <View style={styles.filterOptions}>
-                  <TouchableOpacity
-                    style={[
-                      styles.filterChip,
-                      filters.petType === 'all' && styles.filterChipActive
-                    ]}
-                    onPress={() => setFilters({...filters, petType: 'all'})}
-                  >
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.petType === 'all' && styles.filterChipTextActive
-                    ]}>All</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.filterChip,
-                      filters.petType === 'Dog' && styles.filterChipActive
-                    ]}
-                    onPress={() => setFilters({...filters, petType: 'Dog'})}
-                  >
-                    <FontAwesome5 
-                      name="dog" 
-                      size={12} 
-                      color={filters.petType === 'Dog' ? colors.white : colors.textMedium} 
-                      style={styles.filterChipIcon}
-                    />
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.petType === 'Dog' && styles.filterChipTextActive
-                    ]}>Dogs</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.filterChip,
-                      filters.petType === 'Cat' && styles.filterChipActive
-                    ]}
-                    onPress={() => setFilters({...filters, petType: 'Cat'})}
-                  >
-                    <FontAwesome5 
-                      name="cat" 
-                      size={12} 
-                      color={filters.petType === 'Cat' ? colors.white : colors.textMedium} 
-                      style={styles.filterChipIcon}
-                    />
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.petType === 'Cat' && styles.filterChipTextActive
-                    ]}>Cats</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity
-                    style={[
-                      styles.filterChip,
-                      filters.petType === 'Other' && styles.filterChipActive
-                    ]}
-                    onPress={() => setFilters({...filters, petType: 'Other'})}
-                  >
-                    <FontAwesome5 
-                      name="paw" 
-                      size={12} 
-                      color={filters.petType === 'Other' ? colors.white : colors.textMedium} 
-                      style={styles.filterChipIcon}
-                    />
-                    <Text style={[
-                      styles.filterChipText,
-                      filters.petType === 'Other' && styles.filterChipTextActive
-                    ]}>Other</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Location</Text>
-                <TextInput
-                  placeholder="Filter by location"
-                  placeholderTextColor={colors.textLight}
-                  value={filters.location}
-                  onChangeText={(text) => setFilters({...filters, location: text})}
-                  style={styles.locationInput}
-                />
-              </View>
-              
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionTitle}>Sort By</Text>
-                
-                <TouchableOpacity
-                  style={styles.sortOption}
-                  onPress={() => setFilters({...filters, sortBy: 'recent'})}
-                >
-                  <View style={{ width: 24, alignItems: 'center' }}>
-                    {filters.sortBy === 'recent' ? (
-                      <Ionicons name="radio-button-on" size={18} color={colors.primary} />
-                    ) : (
-                      <Ionicons name="radio-button-off" size={18} color={colors.textMedium} />
-                    )}
-                  </View>
-                  <Text style={styles.sortOptionText}>Most Recent</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.sortOption}
-                  onPress={() => setFilters({...filters, sortBy: 'name'})}
-                >
-                  <View style={{ width: 24, alignItems: 'center' }}>
-                    {filters.sortBy === 'name' ? (
-                      <Ionicons name="radio-button-on" size={18} color={colors.primary} />
-                    ) : (
-                      <Ionicons name="radio-button-off" size={18} color={colors.textMedium} />
-                    )}
-                  </View>
-                  <Text style={styles.sortOptionText}>Pet Name (A-Z)</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.filterActions}>
-                <TouchableOpacity 
-                  style={styles.clearButton}
-                  onPress={() => {
-                    setFilters({
-                      petType: 'all',
-                      location: '',
-                      searchQuery: '',
-                      sortBy: 'recent',
-                    });
-                  }}
-                >
-                  <Text style={styles.clearButtonText}>Reset</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.applyButton}
-                  onPress={() => setFilterModalVisible(false)}
-                >
-                  <Text style={styles.applyButtonText}>Apply</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
           </View>
         </View>
       </Modal>
+
+      {/* IMPROVED Filter Modal */}
+   {/* Filter Modal */}
+<Modal
+  visible={filterModalVisible}
+  animationType="fade"
+  transparent={true}
+  onRequestClose={() => setFilterModalVisible(false)}
+>
+  <View style={styles.filterModalOverlay}>
+    <View style={styles.filterModalContainer}>
+      {/* Header */}
+      <View style={styles.filterModalHeader}>
+        <Text style={styles.filterModalTitle}>Filters</Text>
+        <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+          <AntDesign name="close" size={20} color={colors.darkGray} />
+        </TouchableOpacity>
       </View>
+
+      {/* Body */}
+      <ScrollView style={styles.filterModalBody}>
+        {/* Pet Type Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Pet Type</Text>
+          <View style={styles.filterOptions}>
+            {['All', 'Dog', 'Cat', 'Bird', 'Rabbit', 'Other'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.filterOption,
+                  filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionActive
+                ]}
+                onPress={() => setFilters({...filters, petType: type})}
+              >
+                <Text style={[
+                  styles.filterOptionText,
+                  filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionTextActive
+                ]}>
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Location Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Location</Text>
+          <View style={styles.searchInputContainer}>
+            <Feather name="map-pin" size={16} color={colors.darkGray} />
+            <TextInput
+              style={styles.filterInput}
+              placeholder="Enter location"
+              value={filters.location}
+              onChangeText={(text) => setFilters({...filters, location: text})}
+              placeholderTextColor={colors.darkGray}
+            />
+          </View>
+        </View>
+
+        {/* Sort By Filter */}
+        <View style={styles.filterSection}>
+          <Text style={styles.filterSectionTitle}>Sort By</Text>
+          <View style={styles.filterOptions}>
+            {[
+              { value: 'recent', label: 'Most Recent' },
+              { value: 'name', label: 'Name (A-Z)' },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                style={[
+                  styles.filterOption,
+                  filters.sortBy === option.value && styles.filterOptionActive
+                ]}
+                onPress={() => setFilters({...filters, sortBy: option.value})}
+              >
+                <Text style={[
+                  styles.filterOptionText,
+                  filters.sortBy === option.value && styles.filterOptionTextActive
+                ]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      <View style={styles.filterModalFooter}>
+        <TouchableOpacity 
+          style={styles.clearFiltersButton}
+          onPress={clearFilters}
+        >
+          <Text style={styles.clearFiltersText}>Reset</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.applyFiltersButton}
+          onPress={applyFiltersAndClose}
+        >
+          <Text style={styles.applyFiltersText}>Apply Filters</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  </View>
+</Modal>
+    </View>
   );
 }
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.lightGray,
-    },
-    header: {
-      backgroundColor: colors.primary,
- padding: 16,
-    paddingTop: 10,
-    paddingBottom: 20,
-    },
- 
-    headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginBottom: 4,
+
+// IMPROVED: StyleSheet with compact, professional design
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.white,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.white,
-    opacity: 0.9,
-    marginBottom: 16,
-  },
-  searchFilterContainer: {
+  header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: colors.primary,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.white,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.secondary,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   searchContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     backgroundColor: colors.white,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    marginRight: 8,
-    height: 44,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     fontSize: 14,
-    color: colors.black,
   },
-   filterButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
+  filterButton: {
+    marginLeft: 8,
+    padding: 8,
   },
   tabsContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
-    marginTop: 16,
-    marginBottom: 16,
-    borderRadius: 12,
-    backgroundColor: colors.white,
-    overflow: 'hidden',
+    marginTop: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mediumGray,
   },
   tab: {
     flex: 1,
     paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
   },
   activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: 14,
+    color: colors.darkGray,
+  },
+  activeTabText: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  smartFinderBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    margin: 16,
     backgroundColor: colors.primary,
+    borderRadius: 8,
   },
-  tabIcon: {
-    marginRight: 6,
+  smartFinderText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginHorizontal: 8,
   },
-    tabText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.darkGray,
-    },
-    activeTabText: {
-      color: colors.white,
-    },
-   gridContainer: {
+  gridContainer: {
     paddingHorizontal: 8,
-    paddingBottom: 100,
+    paddingBottom: 16,
   },
-    card: {
+  card: {
     backgroundColor: colors.white,
-    borderRadius: 12,
-    marginBottom: 16,
+    borderRadius: 8,
+    marginBottom: 12,
     width: cardWidth,
-    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   cardImageContainer: {
     position: 'relative',
@@ -1046,9 +878,11 @@ const LostFoundPetsScreen = ({ navigation }) => {
   cardImage: {
     width: '100%',
     height: '100%',
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
   },
-   imagePlaceholder: {
-    backgroundColor: colors.primaryLight,
+  imagePlaceholder: {
+    backgroundColor: colors.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1058,28 +892,26 @@ const LostFoundPetsScreen = ({ navigation }) => {
     right: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   statusText: {
     color: colors.white,
     fontSize: 10,
     fontWeight: 'bold',
   },
-    cardContent: {
-      padding: 12,
-    },
-    cardTitle: {
-      fontSize: 16,
-      fontWeight: 'bold',
-      color: colors.textDark,
-      marginBottom: 4,
-    },
-    cardInfo: {
-      flexDirection: 'row',
-        //this is where the the mark found btn 
-      marginBottom: 8,
-    },
-     infoRow: {
+  cardContent: {
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.black,
+    marginBottom: 8,
+  },
+  cardInfo: {
+    marginBottom: 12,
+  },
+  infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 6,
@@ -1088,438 +920,140 @@ const LostFoundPetsScreen = ({ navigation }) => {
     fontSize: 12,
     color: colors.darkGray,
     marginLeft: 6,
-    flexShrink: 1,
   },
-  cardActions: {
-    flexDirection: 'row',
-  },
-   actionButton: {
-    flex: 1,
+  actionButton: {
     paddingVertical: 8,
-    borderRadius: 8,
-    justifyContent: 'center',
+    borderRadius: 6,
     alignItems: 'center',
   },
   actionButtonText: {
     color: colors.white,
     fontSize: 12,
-    fontWeight: 'bold',
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    top: 5,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#FF6347',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 3,
-  },
-   smartFinderBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    padding: 16,
-    backgroundColor: colors.primaryDark,
-    borderRadius: 12,
-  },
-  smartFinderIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  smartFinderContent: {
-    flex: 1,
-  },
-  smartFinderTitle: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  smartFinderSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-  resultsHeader: {
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  resultsCount: {
-    fontSize: 14,
-    color: colors.darkGray,
+    fontWeight: '600',
   },
   emptyContainer: {
     flex: 1,
-    padding: 24,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.black,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: colors.darkGray,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  emptyButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: colors.white,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.lightGray,
-  },
-  loadingText: {
-    marginTop: 12,
     fontSize: 16,
     color: colors.darkGray,
+    marginTop: 16,
   },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    modalContainer: {
-      width: '90%',
-      maxHeight: '90%',
-      backgroundColor: colors.white,
-      borderRadius: 20,
-      overflow: 'hidden',
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    modalTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.textDark,
-    },
-    closeButton: {
-      padding: 4,
-    },
-    modalContent: {
-      padding: 16,
-    },
-    formSection: {
-      marginBottom: 20,
-    },
-    formSectionTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textDark,
-      marginBottom: 12,
-    },
-    input: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
-      fontSize: 14,
-      color: colors.textDark,
-    },
-    textArea: {
-      height: 100,
-      textAlignVertical: 'top',
-    },
-    typeSelector: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 12,
-    },
-    typeOption: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.background,
-      paddingVertical: 12,
-      marginHorizontal: 4,
-      borderRadius: 12,
-    },
-    typeOptionActive: {
-      backgroundColor: colors.primary,
-    },
-    typeText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textMedium,
-      marginLeft: 6,
-    },
-    typeTextActive: {
-      color: colors.white,
-    },
-    imageUploadButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: colors.primaryLight,
-      borderRadius: 12,
-      padding: 12,
-      borderWidth: 1,
-      borderColor: colors.primary,
-      borderStyle: 'dashed',
-    },
-    imageUploadText: {
-      marginLeft: 8,
-      fontSize: 14,
-      color: colors.primary,
-      fontWeight: '500',
-    },
-    previewContainer: {
-      position: 'relative',
-      marginTop: 12,
-      borderRadius: 12,
-      overflow: 'hidden',
-    },
-    previewImage: {
-      width: '100%',
-      height: 200,
-      borderRadius: 12,
-    },
-    removeImageButton: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      backgroundColor: 'rgba(0, 0, 0, 0.6)',
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    formActions: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginTop: 20,
-    },
-    formButton: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-    },
-    cancelButton: {
-      backgroundColor: colors.background,
-      marginRight: 8,
-    },
-    cancelButtonText: {
-      color: colors.textMedium,
-      fontWeight: '600',
-      fontSize: 14,
-    },
-    submitButton: {
-      backgroundColor: colors.primary,
-      marginLeft: 8,
-    },
-    submitButtonText: {
-      color: colors.white,
-      fontWeight: '600',
-      fontSize: 14,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-    },
-    loadingText: {
-      marginTop: 12,
-      fontSize: 16,
-      color: colors.textMedium,
-    },
-    emptyContainer: {
-      padding: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: colors.textDark,
-      marginTop: 16,
-      marginBottom: 8,
-    },
-    emptyText: {
-      fontSize: 14,
-      color: colors.textMedium,
-      textAlign: 'center',
-      marginBottom: 24,
-    },
-    emptyButton: {
-      backgroundColor: colors.primary,
-      paddingHorizontal: 24,
-      paddingVertical: 12,
-      borderRadius: 12,
-    },
-    emptyButtonText: {
-      color: colors.white,
-      fontWeight: '600',
-      fontSize: 14,
-    },
-    resultsHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      marginBottom: 8,
-    },
-    resultsCount: {
-      fontSize: 14,
-      color: colors.textMedium,
-    },
-    smartFinderBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: 16,
-      marginBottom: 16,
-      padding: 12,
-      backgroundColor: colors.primaryDark,
-      borderRadius: 12,
-    },
-    smartFinderIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    smartFinderContent: {
-      flex: 1,
-    },
-    smartFinderTitle: {
-      color: colors.white,
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    smartFinderSubtitle: {
-      color: 'rgba(255, 255, 255, 0.8)',
-      fontSize: 12,
-    },
-    filterModalContainer: {
-      width: '85%',
-    },
-    filterModalContent: {
-      padding: 16,
-    },
-    filterSection: {
-      marginBottom: 16,
-    },
-    filterSectionTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.textDark,
-      marginBottom: 12,
-    },
-    filterOptions: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-    },
-    filterChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.background,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginRight: 8,
-      marginBottom: 8,
-    },
-    filterChipActive: {
-      backgroundColor: colors.primary,
-    },
-    filterChipIcon: {
-      marginRight: 4,
-    },
-    filterChipText: {
-      fontSize: 12,
-      color: colors.textMedium,
-    },
-    filterChipTextActive: {
-      color: colors.white,
-    },
-    locationInput: {
-      backgroundColor: colors.background,
-      borderRadius: 12,
-      padding: 12,
-      marginBottom: 12,
-      fontSize: 14,
-      color: colors.textDark,
-    },
-    sortBySection: {
-      marginTop: 8,
-      marginBottom: 20,
-    },
-    sortOption: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-    },
-    sortOptionText: {
-      fontSize: 14,
-      marginLeft: 12,
-      color: colors.textDark,
-    },
-    filterActions: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginTop: 20,
-    },
-    clearButton: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-      backgroundColor: colors.background,
-      marginRight: 8,
-    },
-    clearButtonText: {
-      color: colors.textMedium,
-      fontWeight: '600',
-      fontSize: 14,
-    },
-    applyButton: {
-      flex: 1,
-      paddingVertical: 12,
-      borderRadius: 12,
-      alignItems: 'center',
-      backgroundColor: colors.primary,
-      marginLeft: 8,
-    },
-    applyButtonText: {
-      color: colors.white,
-      fontWeight: '600',
-      fontSize: 14,
-    }
-  });
+  filterModalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+filterModalContainer: {
+  width: '90%',
+  maxHeight: '80%',
+  backgroundColor: colors.white,
+  borderRadius: 12,
+  overflow: 'hidden',
+},
+filterModalHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: colors.lightGray,
+},
+filterModalTitle: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: colors.black,
+},
+filterModalBody: {
+  paddingHorizontal: 16,
+  maxHeight: '70%',
+},
+filterSection: {
+  marginVertical: 12,
+},
+filterSectionTitle: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: colors.black,
+  marginBottom: 8,
+},
+filterOptions: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 8,
+},
+filterOption: {
+  paddingHorizontal: 16,
+  paddingVertical: 8,
+  borderRadius: 20,
+  borderWidth: 1,
+  borderColor: colors.mediumGray,
+  backgroundColor: colors.white,
+},
+filterOptionActive: {
+  backgroundColor: colors.primary,
+  borderColor: colors.primary,
+},
+filterOptionText: {
+  fontSize: 14,
+  color: colors.darkGray,
+},
+filterOptionTextActive: {
+  color: colors.white,
+},
+searchInputContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  borderWidth: 1,
+  borderColor: colors.mediumGray,
+  borderRadius: 8,
+  paddingHorizontal: 12,
+  height: 48,
+},
+filterInput: {
+  flex: 1,
+  height: '100%',
+  marginLeft: 8,
+  fontSize: 14,
+  color: colors.black,
+},
+filterModalFooter: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  padding: 16,
+  borderTopWidth: 1,
+  borderTopColor: colors.lightGray,
+},
+clearFiltersButton: {
+  flex: 1,
+  marginRight: 8,
+  paddingVertical: 12,
+  borderRadius: 8,
+  borderWidth: 1,
+  borderColor: colors.mediumGray,
+  alignItems: 'center',
+},
+clearFiltersText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: colors.darkGray,
+},
+applyFiltersButton: {
+  flex: 1,
+  paddingVertical: 12,
+  borderRadius: 8,
+  backgroundColor: colors.primary,
+  alignItems: 'center',
+},
+applyFiltersText: {
+  fontSize: 14,
+  fontWeight: '600',
+  color: colors.white,
+},
+});
+
 export default LostFoundPetsScreen;
-  

@@ -1086,16 +1086,18 @@ const renderItem = ({ item }) => (
       <StatusBar backgroundColor={colors.primary} barStyle="light-content" />
       
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Pet Shelters</Text>
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => setCreateFormVisible(true)}
-        >
-          <Ionicons name="add" size={24} color={colors.white} />
-        </TouchableOpacity>
-      </View>
-      
+ <View style={styles.header}>
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={24} color={colors.white} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Pet Shelters</Text>
+    </View>
+
+    {/* Search and FAB Container */}
+    <View style={styles.searchFabContainer}>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Ionicons name="search" size={20} color={colors.darkGray} style={styles.searchIcon} />
@@ -1115,6 +1117,15 @@ const renderItem = ({ item }) => (
           </TouchableOpacity>
         )}
       </View>
+      
+      {/* Floating Action Button */}
+      <TouchableOpacity 
+        style={styles.floatingActionButton}
+        onPress={() => setCreateFormVisible(true)}
+      >
+        <Ionicons name="add" size={24} color={colors.white} />
+      </TouchableOpacity>
+    </View>
       
       {/* Filter Row */}
       <View style={styles.filterRow}>
@@ -1347,7 +1358,7 @@ const renderItem = ({ item }) => (
 };
 
 const styles = StyleSheet.create({
-  container: {
+   container: {
     flex: 1,
     backgroundColor: colors.lightGray,
   },
@@ -1355,33 +1366,33 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     padding: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 16 : 16,
+  },
+  backButton: {
+    marginRight: 16,
   },
   headerTitle: {
     color: colors.white,
     fontSize: 20,
     fontWeight: 'bold',
+    flex: 1,
   },
-  addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primaryDark,
-    justifyContent: 'center',
+  searchFabContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
   },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: 10,
     paddingHorizontal: 15,
     paddingVertical: 10,
-    marginHorizontal: 16,
-    marginTop: 10,
-    marginBottom: 8,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1398,6 +1409,20 @@ const styles = StyleSheet.create({
   },
   clearSearchButton: {
     padding: 4,
+  },
+  floatingActionButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   filterRow: {
     flexDirection: 'row',
@@ -1642,9 +1667,10 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  backButton: {
-    marginRight: 16,
-  },
+ backButton: {
+  padding: 4,
+  marginRight: 8,
+},
   mapTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -1830,9 +1856,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.mediumGray,
   },
-  backButton: {
-    marginRight: 16,
-  },
+backButton: {
+  padding: 4,
+  marginRight: 8,
+},
   mapTitle: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -2084,6 +2111,27 @@ moreServicesText: {
   fontSize: 12,
   color: colors.darkGray,
 },
+topActionContainer: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  marginBottom: 8,
+},
+searchContainer: {
+  flex: 1,
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: colors.white,
+  borderRadius: 10,
+  paddingHorizontal: 15,
+  paddingVertical: 10,
+  shadowColor: colors.black,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  elevation: 2,
+},
+
 });
 
 export default ShelterScreen;
