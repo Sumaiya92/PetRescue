@@ -43,6 +43,9 @@ export const colors = {
   warning: '#ED8936',
   info: '#4299E1',
   highlight: '#FEFCBF',
+  gradient1: '#667eea',
+  gradient2: '#764ba2',
+  accent: '#f093fb',
 };
 
 const LostFoundPetsScreen = ({ navigation }) => {
@@ -56,6 +59,8 @@ const LostFoundPetsScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [imageUri, setImageUri] = useState(null);
   const [fabAnimation] = useState(new Animated.Value(1));
+  const [tabIndicatorAnimation] = useState(new Animated.Value(0));
+  const [headerAnimation] = useState(new Animated.Value(0));
   const [filters, setFilters] = useState({
     petType: 'all',
     location: '',
@@ -79,6 +84,26 @@ const LostFoundPetsScreen = ({ navigation }) => {
   };
 
   const [petForm, setPetForm] = useState(initialFormState);
+
+  // Animate header on mount
+  useEffect(() => {
+    Animated.timing(headerAnimation, {
+      toValue: 1,
+      duration: 800,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
+  // Animate tab indicator when tab changes
+  useEffect(() => {
+    Animated.spring(tabIndicatorAnimation, {
+      toValue: activeTab === 'lost' ? 0 : 1,
+      tension: 120,
+      friction: 8,
+      useNativeDriver: true,
+    }).start();
+  }, [activeTab]);
 
   // Get appropriate icon for pet type
   const getPetIcon = (type) => {
@@ -121,7 +146,7 @@ const LostFoundPetsScreen = ({ navigation }) => {
       isResolved: isResolved,
     };
   }
-};;
+};
 
   const navigateToLostPetDetails = (pet) => {
     if (pet && pet._id) {
@@ -411,13 +436,11 @@ const LostFoundPetsScreen = ({ navigation }) => {
         </View>
         
         <View style={styles.cardContent}>
-          {/* {act<Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text> */}
-          {
-            activeTab === 'lost' && 
-              <Text style={styles.cardTitle} numberOfLines={1}>
-                {item.name || 'Unknown Pet'}
-              </Text>
-  }
+          {activeTab === 'lost' && 
+            <Text style={styles.cardTitle} numberOfLines={1}>
+              {item.name || 'Unknown Pet'}
+            </Text>
+          }
           
           <View style={styles.cardInfo}>
             <View style={styles.infoRow}>
@@ -457,60 +480,133 @@ const LostFoundPetsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Lost & Found</Text>
-        <Animated.View style={[styles.addButton, { transform: [{ scale: fabAnimation }]}]}>
-          <TouchableOpacity 
-            onPress={() => {
-              setModalVisible(true);
-              setPetForm({...initialFormState, status: activeTab});
-            }}
-          >
-            <AntDesign name="plus" size={18} color="#FFF" />
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
+      {/* Enhanced Header with Animation */}
+      <Animated.View style={[
+        styles.header,
+        {
+          transform: [{
+            translateY: headerAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-50, 0],
+            })
+          }],
+          opacity: headerAnimation,
+        }
+      ]}>
+   <View style={styles.headerContent}>
+    <Text style={styles.headerTitle}>Bringing families together</Text>
+    
+    <Animated.View style={[
+      styles.addButton, 
+      { transform: [{ scale: fabAnimation }] }
+    ]}>
+      <TouchableOpacity 
+        onPress={() => {
+          setModalVisible(true);
+          setPetForm({...initialFormState, status: activeTab});
+          
+          // Animate button press
+          Animated.sequence([
+            Animated.timing(fabAnimation, {
+              toValue: 0.8,
+              duration: 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(fabAnimation, {
+              toValue: 1,
+              duration: 100,
+              useNativeDriver: true,
+            })
+          ]).start();
+        }}
+        activeOpacity={0.8}
+      >
+        <AntDesign name="plus" size={20} color="#FFF" />
+      </TouchableOpacity>
+    </Animated.View>
+  </View>
+      </Animated.View>
 
-      {/* Search and Filter */}
+      {/* Enhanced Search Container */}
       <View style={styles.searchContainer}>
-        <Feather name="search" size={16} color={colors.darkGray} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search pets..."
-          placeholderTextColor={colors.darkGray}
-          value={filters.searchQuery}
-          onChangeText={(text) => setFilters({...filters, searchQuery: text})}
-        />
+        <View style={styles.searchWrapper}>
+          <Feather name="search" size={18} color={colors.primary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, breed, or description..."
+            placeholderTextColor={colors.darkGray}
+            value={filters.searchQuery}
+            onChangeText={(text) => setFilters({...filters, searchQuery: text})}
+          />
+        </View>
         <TouchableOpacity 
           style={styles.filterButton}
           onPress={() => setFilterModalVisible(true)}
+          activeOpacity={0.7}
         >
-          <Feather name="sliders" size={16} color={colors.primary} />
+          <View style={styles.filterIconContainer}>
+            <Feather name="sliders" size={18} color={colors.primary} />
+          </View>
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
+      {/* Enhanced Tabs with Animation */}
       <View style={styles.tabsContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'lost' && styles.activeTab]}
-          onPress={() => setActiveTab('lost')}
-        >
-          <Text style={[styles.tabText, activeTab === 'lost' && styles.activeTabText]}>
-            Lost Pets
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'found' && styles.activeTab]}
-          onPress={() => setActiveTab('found')}
-        >
-          <Text style={[styles.tabText, activeTab === 'found' && styles.activeTabText]}>
-            Found Pets
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.tabsWrapper}>
+          <TouchableOpacity
+            style={[styles.tab]}
+            onPress={() => setActiveTab('lost')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome5 
+              name="search" 
+              size={16} 
+              color={activeTab === 'lost' ? colors.primary : colors.darkGray} 
+              style={styles.tabIcon}
+            />
+            <Text style={[
+              styles.tabText, 
+              activeTab === 'lost' && styles.activeTabText
+            ]}>
+              Missing Pets
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.tab]}
+            onPress={() => setActiveTab('found')}
+            activeOpacity={0.7}
+          >
+            <FontAwesome5 
+              name="hand-holding-heart" 
+              size={16} 
+              color={activeTab === 'found' ? colors.primary : colors.darkGray} 
+              style={styles.tabIcon}
+            />
+            <Text style={[
+              styles.tabText, 
+              activeTab === 'found' && styles.activeTabText
+            ]}>
+              Found Pets
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Animated Tab Indicator */}
+          <Animated.View style={[
+            styles.tabIndicator,
+            {
+              transform: [{
+                translateX: tabIndicatorAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, width / 2],
+                })
+              }]
+            }
+          ]} />
+        </View>
       </View>
 
-      {/* Smart Finder Banner - Simplified */}
+      {/* Smart Finder Banner - Keep unchanged */}
       <TouchableOpacity 
         style={styles.smartFinderBanner}
         onPress={() => navigation.navigate('PetSearch')}
@@ -526,7 +622,7 @@ const LostFoundPetsScreen = ({ navigation }) => {
         keyExtractor={(item) => item._id}
         renderItem={renderPetCard}
         numColumns={2}
-        contentContainerStyle={[styles.gridContainer,{ paddingBottom: 120 }]}
+        contentContainerStyle={[styles.gridContainer, { paddingBottom: 120 }]}
         refreshing={refreshing}
         onRefresh={handleRefresh}
         ListEmptyComponent={
@@ -537,7 +633,7 @@ const LostFoundPetsScreen = ({ navigation }) => {
         }
       />
 
-      {/* Add Pet Modal */}
+      {/* Add Pet Modal - Keep unchanged */}
       <Modal
         visible={modalVisible}
         animationType="slide"
@@ -659,401 +755,690 @@ const LostFoundPetsScreen = ({ navigation }) => {
         </View>
       </Modal>
 
-      {/* IMPROVED Filter Modal */}
-   {/* Filter Modal */}
-<Modal
-  visible={filterModalVisible}
-  animationType="fade"
-  transparent={true}
-  onRequestClose={() => setFilterModalVisible(false)}
->
-  <View style={styles.filterModalOverlay}>
-    <View style={styles.filterModalContainer}>
-      {/* Header */}
-      <View style={styles.filterModalHeader}>
-        <Text style={styles.filterModalTitle}>Filters</Text>
-        <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
-          <AntDesign name="close" size={20} color={colors.darkGray} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Body */}
-      <ScrollView style={styles.filterModalBody}>
-        {/* Pet Type Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Pet Type</Text>
-          <View style={styles.filterOptions}>
-            {['All', 'Dog', 'Cat', 'Bird', 'Rabbit', 'Other'].map((type) => (
-              <TouchableOpacity
-                key={type}
-                style={[
-                  styles.filterOption,
-                  filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionActive
-                ]}
-                onPress={() => setFilters({...filters, petType: type})}
-              >
-                <Text style={[
-                  styles.filterOptionText,
-                  filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionTextActive
-                ]}>
-                  {type}
-                </Text>
+      {/* Filter Modal - Keep unchanged */}
+      <Modal
+        visible={filterModalVisible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <View style={styles.filterModalOverlay}>
+          <View style={styles.filterModalContainer}>
+            <View style={styles.filterModalHeader}>
+              <Text style={styles.filterModalTitle}>Filters</Text>
+              <TouchableOpacity onPress={() => setFilterModalVisible(false)}>
+                <AntDesign name="close" size={20} color={colors.darkGray} />
               </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+            </View>
 
-        {/* Location Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Location</Text>
-          <View style={styles.searchInputContainer}>
-            <Feather name="map-pin" size={16} color={colors.darkGray} />
-            <TextInput
-              style={styles.filterInput}
-              placeholder="Enter location"
-              value={filters.location}
-              onChangeText={(text) => setFilters({...filters, location: text})}
-              placeholderTextColor={colors.darkGray}
-            />
-          </View>
-        </View>
+            <ScrollView style={styles.filterModalBody}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Pet Type</Text>
+                <View style={styles.filterOptions}>
+                  {['All', 'Dog', 'Cat', 'Bird', 'Rabbit', 'Other'].map((type) => (
+                    <TouchableOpacity
+                      key={type}
+                      style={[
+                        styles.filterOption,
+                        filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionActive
+                      ]}
+                      onPress={() => setFilters({...filters, petType: type})}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        filters.petType.toLowerCase() === type.toLowerCase() && styles.filterOptionTextActive
+                      ]}>
+                        {type}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-        {/* Sort By Filter */}
-        <View style={styles.filterSection}>
-          <Text style={styles.filterSectionTitle}>Sort By</Text>
-          <View style={styles.filterOptions}>
-            {[
-              { value: 'recent', label: 'Most Recent' },
-              { value: 'name', label: 'Name (A-Z)' },
-            ].map((option) => (
-              <TouchableOpacity
-                key={option.value}
-                style={[
-                  styles.filterOption,
-                  filters.sortBy === option.value && styles.filterOptionActive
-                ]}
-                onPress={() => setFilters({...filters, sortBy: option.value})}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Location</Text>
+                <View style={styles.searchInputContainer}>
+                  <Feather name="map-pin" size={16} color={colors.darkGray} />
+                  <TextInput
+                    style={styles.filterInput}
+                    placeholder="Enter location"
+                    value={filters.location}
+                    onChangeText={(text) => setFilters({...filters, location: text})}
+                    placeholderTextColor={colors.darkGray}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionTitle}>Sort By</Text>
+                <View style={styles.filterOptions}>
+                  {[
+                    { value: 'recent', label: 'Most Recent' },
+                    { value: 'name', label: 'Name (A-Z)' },
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.value}
+                      style={[
+                        styles.filterOption,
+                        filters.sortBy === option.value && styles.filterOptionActive
+                      ]}
+                      onPress={() => setFilters({...filters, sortBy: option.value})}
+                    >
+                      <Text style={[
+                        styles.filterOptionText,
+                        filters.sortBy === option.value && styles.filterOptionTextActive
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.filterModalFooter}>
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={clearFilters}
               >
-                <Text style={[
-                  styles.filterOptionText,
-                  filters.sortBy === option.value && styles.filterOptionTextActive
-                ]}>
-                  {option.label}
-                </Text>
+                <Text style={styles.clearFiltersText}>Reset</Text>
               </TouchableOpacity>
-            ))}
+              <TouchableOpacity 
+                style={styles.applyFiltersButton}
+                onPress={applyFiltersAndClose}
+              >
+                <Text style={styles.applyFiltersText}>Apply Filters</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </ScrollView>
-
-      {/* Footer */}
-      <View style={styles.filterModalFooter}>
-        <TouchableOpacity 
-          style={styles.clearFiltersButton}
-          onPress={clearFilters}
-        >
-          <Text style={styles.clearFiltersText}>Reset</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.applyFiltersButton}
-          onPress={applyFiltersAndClose}
-        >
-          <Text style={styles.applyFiltersText}>Apply Filters</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </View>
-</Modal>
+      </Modal>
     </View>
   );
 }
 
-// IMPROVED: StyleSheet with compact, professional design
+// Enhanced StyleSheet (continued from line 799)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
   },
+  
+  // Simple Header Styles
   header: {
+    
+    paddingHorizontal: 30,
+    paddingVertical: 10,
+  },
+  
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: colors.primary,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.white,
+  
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.secondary,
+  
+  iconContainer: {
+    position: 'relative',
+    marginRight: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
+  
+  overlayIcon: {
+    position: 'absolute',
+    top: 8,
+    left: 10,
+  },
+  
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: colors.black,
+  },
+  
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
+  },
+  
+  addButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  // Enhanced Search Container
   searchContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     backgroundColor: colors.white,
+    gap: 12,
   },
+  
+  searchWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+  },
+  
   searchIcon: {
-    marginRight: 8,
+    marginRight: 12,
   },
+  
   searchInput: {
     flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderColor: colors.mediumGray,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: 16,
+    color: colors.black,
+    fontWeight: '400',
   },
+  
   filterButton: {
-    marginLeft: 8,
-    padding: 8,
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
   },
+  
+  filterIconContainer: {
+    padding: 12,
+  },
+  
+  // Enhanced Tabs
   tabsContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.mediumGray,
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
+  
+  tabsWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    backgroundColor: colors.lightGray,
+    borderRadius: 12,
+    padding: 4,
+  },
+  
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    zIndex: 2,
   },
-  activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
+  
+  tabIcon: {
+    marginRight: 8,
   },
+  
   tabText: {
     fontSize: 14,
+    fontWeight: '500',
     color: colors.darkGray,
   },
+  
   activeTabText: {
     color: colors.primary,
     fontWeight: '600',
   },
+  
+  tabIndicator: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    width: '50%',
+    height: '100%',
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 1,
+  },
+  
+  // Smart Finder Banner
   smartFinderBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    margin: 16,
     backgroundColor: colors.primary,
-    borderRadius: 8,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
   },
+  
   smartFinderText: {
     color: colors.white,
     fontSize: 14,
     fontWeight: '600',
-    marginHorizontal: 8,
   },
+  
+  // Grid and Card Styles
   gridContainer: {
-    paddingHorizontal: 8,
-    paddingBottom: 16,
+    paddingTop: 8,
   },
+  
   card: {
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    marginBottom: 12,
     width: cardWidth,
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
   },
+  
   cardImageContainer: {
     position: 'relative',
-    height: 120,
+    height: cardWidth * 0.75,
   },
+  
   cardImage: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-  },
-  imagePlaceholder: {
     backgroundColor: colors.lightGray,
+  },
+  
+  imagePlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.lightGray,
   },
+  
   statusBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
   },
+  
   statusText: {
     color: colors.white,
     fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
+  
   cardContent: {
     padding: 12,
   },
+  
   cardTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.black,
     marginBottom: 8,
   },
+  
   cardInfo: {
     marginBottom: 12,
+    gap: 4,
   },
+  
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    gap: 6,
   },
+  
   infoText: {
     fontSize: 12,
     color: colors.darkGray,
-    marginLeft: 6,
+    flex: 1,
   },
+  
   actionButton: {
     paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
     alignItems: 'center',
   },
+  
   actionButtonText: {
     color: colors.white,
     fontSize: 12,
     fontWeight: '600',
   },
+  
+  // Empty State
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
+    paddingVertical: 60,
   },
+  
   emptyTitle: {
     fontSize: 16,
     color: colors.darkGray,
-    marginTop: 16,
+    marginTop: 12,
+    fontWeight: '500',
   },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  
+  modalContent: {
+    backgroundColor: colors.white,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '90%',
+  },
+  
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mediumGray,
+  },
+  
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.black,
+  },
+  
+  modalBody: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  
+  formGroup: {
+    marginBottom: 20,
+    paddingTop: 8,
+  },
+  
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.black,
+    marginBottom: 8,
+  },
+  
+  input: {
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: colors.black,
+    backgroundColor: colors.white,
+  },
+  
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
+  
+  typeSelector: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  
+  typeOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    backgroundColor: colors.white,
+  },
+  
+  selectedTypeOption: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  
+  typeOptionText: {
+    fontSize: 14,
+    color: colors.darkGray,
+    fontWeight: '500',
+  },
+  
+  selectedTypeOptionText: {
+    color: colors.white,
+  },
+  
+  imagePickerButton: {
+    borderWidth: 2,
+    borderColor: colors.mediumGray,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    height: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  imagePlaceholderButton: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  
+  imagePickerText: {
+    fontSize: 14,
+    color: colors.darkGray,
+    fontWeight: '500',
+  },
+  
+  selectedImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 6,
+  },
+  
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.mediumGray,
+    gap: 12,
+  },
+  
+  cancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    alignItems: 'center',
+  },
+  
+  cancelButtonText: {
+    fontSize: 16,
+    color: colors.darkGray,
+    fontWeight: '600',
+  },
+  
+  submitButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  
+  submitButtonText: {
+    fontSize: 16,
+    color: colors.white,
+    fontWeight: '600',
+  },
+  
+  // Filter Modal Styles
   filterModalOverlay: {
-  flex: 1,
-  backgroundColor: 'rgba(0,0,0,0.5)',
-  justifyContent: 'center',
-  alignItems: 'center',
-},
-filterModalContainer: {
-  width: '90%',
-  maxHeight: '80%',
-  backgroundColor: colors.white,
-  borderRadius: 12,
-  overflow: 'hidden',
-},
-filterModalHeader: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: 16,
-  borderBottomWidth: 1,
-  borderBottomColor: colors.lightGray,
-},
-filterModalTitle: {
-  fontSize: 18,
-  fontWeight: '600',
-  color: colors.black,
-},
-filterModalBody: {
-  paddingHorizontal: 16,
-  maxHeight: '70%',
-},
-filterSection: {
-  marginVertical: 12,
-},
-filterSectionTitle: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: colors.black,
-  marginBottom: 8,
-},
-filterOptions: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  gap: 8,
-},
-filterOption: {
-  paddingHorizontal: 16,
-  paddingVertical: 8,
-  borderRadius: 20,
-  borderWidth: 1,
-  borderColor: colors.mediumGray,
-  backgroundColor: colors.white,
-},
-filterOptionActive: {
-  backgroundColor: colors.primary,
-  borderColor: colors.primary,
-},
-filterOptionText: {
-  fontSize: 14,
-  color: colors.darkGray,
-},
-filterOptionTextActive: {
-  color: colors.white,
-},
-searchInputContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  borderWidth: 1,
-  borderColor: colors.mediumGray,
-  borderRadius: 8,
-  paddingHorizontal: 12,
-  height: 48,
-},
-filterInput: {
-  flex: 1,
-  height: '100%',
-  marginLeft: 8,
-  fontSize: 14,
-  color: colors.black,
-},
-filterModalFooter: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  padding: 16,
-  borderTopWidth: 1,
-  borderTopColor: colors.lightGray,
-},
-clearFiltersButton: {
-  flex: 1,
-  marginRight: 8,
-  paddingVertical: 12,
-  borderRadius: 8,
-  borderWidth: 1,
-  borderColor: colors.mediumGray,
-  alignItems: 'center',
-},
-clearFiltersText: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: colors.darkGray,
-},
-applyFiltersButton: {
-  flex: 1,
-  paddingVertical: 12,
-  borderRadius: 8,
-  backgroundColor: colors.primary,
-  alignItems: 'center',
-},
-applyFiltersText: {
-  fontSize: 14,
-  fontWeight: '600',
-  color: colors.white,
-},
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  
+  filterModalContainer: {
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '80%',
+  },
+  
+  filterModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.mediumGray,
+  },
+  
+  filterModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.black,
+  },
+  
+  filterModalBody: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  
+  filterSection: {
+    marginBottom: 24,
+    paddingTop: 16,
+  },
+  
+  filterSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.black,
+    marginBottom: 12,
+  },
+  
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  
+  filterOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    backgroundColor: colors.white,
+  },
+  
+  filterOptionActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  
+  filterOptionText: {
+    fontSize: 14,
+    color: colors.darkGray,
+    fontWeight: '500',
+  },
+  
+  filterOptionTextActive: {
+    color: colors.white,
+  },
+  
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  
+  filterInput: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.black,
+  },
+  
+  filterModalFooter: {
+    flexDirection: 'row',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.mediumGray,
+    gap: 12,
+  },
+  
+  clearFiltersButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.mediumGray,
+    alignItems: 'center',
+  },
+  
+  clearFiltersText: {
+    fontSize: 16,
+    color: colors.darkGray,
+    fontWeight: '600',
+  },
+  
+  applyFiltersButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  
+  applyFiltersText: {
+    fontSize: 16,
+    color: colors.white,
+    fontWeight: '600',
+  },
 });
 
 export default LostFoundPetsScreen;
